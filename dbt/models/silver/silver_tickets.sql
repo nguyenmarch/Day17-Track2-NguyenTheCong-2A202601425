@@ -32,19 +32,28 @@
 --
 -- Xong file này thì sang models/silver/quarantine_tickets.sql (phần 3/3).
 -- ---------------------------------------------------------------------------
-
 {{ config(materialized = 'table') }}
 
-with ranked as (
+with valid_events as (
 
     select
         *,
-        {{ normalize_priority('priority_raw') }}             as priority_clean,
+        {{ normalize_priority('priority_raw') }} as priority_clean
+    from {{ source('bronze', 'bronze_tickets_cdc') }}
+    -- Lọc bỏ bản ghi lỗi trước khi xếp hạng CDC
+    where {{ normalize_priority('priority_raw') }} is not null
+
+),
+
+ranked as (
+
+    select
+        *,
         row_number() over (
             partition by ticket_id
             order by event_time desc, cdc_seq desc
         ) as _rn
-    from {{ source('bronze', 'bronze_tickets_cdc') }}
+    from valid_events
 
 ),
 

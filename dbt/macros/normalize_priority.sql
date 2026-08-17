@@ -45,18 +45,15 @@
 #}
 
 {% macro normalize_priority(col) %}
-    -- TODO(nhiệm vụ 3): thay biểu thức dưới đây bằng một khối CASE xử lý
-    -- đủ ba nhóm ở trên.
-    --
-    --     case
-    --         when <nhóm 1: đã là số hợp lệ>  then <giữ nguyên>
-    --         when <nhóm 2: nhãn chữ>         then <số tương ứng>
-    --         ...
-    --         else null                        -- nhóm 3
-    --     end
-    try_cast({{ col }} as integer)
+    case 
+        when try_cast({{ col }} as integer) in (1, 2, 3, 4) then try_cast({{ col }} as integer)
+        when lower(trim({{ col }})) in ('1', 'low') then 1
+        when lower(trim({{ col }})) in ('2', 'medium') then 2
+        when lower(trim({{ col }})) in ('3', 'high') then 3
+        when lower(trim({{ col }})) in ('4', 'urgent') then 4
+        else null
+    end
 {% endmacro %}
-
 
 {#
     Lý do bị loại — để người trực đọc log là hiểu ngay phải làm gì.
@@ -64,6 +61,10 @@
     hơn (rỗng / NULL / là số nhưng ngoài khoảng / là chuỗi lạ).
 #}
 {% macro priority_reject_reason(col) %}
-    -- TODO(nhiệm vụ 3, không bắt buộc): phân biệt các loại lỗi khác nhau.
-    'priority không quy đổi được về 1..4'
+    case
+        when {{ col }} is null or trim({{ col }}) = '' then 'NULL_OR_EMPTY'
+        when try_cast({{ col }} as integer) is not null and try_cast({{ col }} as integer) not in (1, 2, 3, 4) then 'OUT_OF_RANGE_NUMBER'
+        when lower(trim({{ col }})) in ('p1', 'p2', 'p3', 'p4') then 'UNSUPPORTED_PREFIX_FORMAT'
+        else 'UNKNOWN_STRING_VALUE'
+    end
 {% endmacro %}

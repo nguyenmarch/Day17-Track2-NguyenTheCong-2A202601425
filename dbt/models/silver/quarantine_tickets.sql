@@ -21,18 +21,19 @@
 
 select
     ticket_id,
-    cdc_seq,
-    op,
-    event_time,
-    _ingested_at,
-    priority_raw,
-    {{ priority_reject_reason('priority_raw') }}             as reject_reason,
     customer_id,
     customer_name,
+    segment,
+    priority_raw,
     category,
-    status
+    channel,
+    status,
+    csat,
+    first_response_sec,
+    subject,
+    body,
+    op,
+    event_time,
+    _ingested_at
 from {{ source('bronze', 'bronze_tickets_cdc') }}
-
--- TODO(nhiệm vụ 3): thay `false` bằng điều kiện "priority không chuẩn hoá
--- được". Khi còn `false`, bảng rỗng và make verify báo 0 / <số kỳ vọng>.
-where false
+where {{ normalize_priority('priority_raw') }} is null
